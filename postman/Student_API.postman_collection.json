@@ -1,0 +1,677 @@
+{
+  "info": {
+    "name": "Student CRUD API - SW426 PBL",
+    "description": "Postman tests for the Student CRUD REST API (Express + SQLite). Run the whole collection with the Collection Runner or Newman.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. CRUD Operations (valid requests)",
+      "item": [
+        {
+          "name": "TC01 - CREATE: Add a valid student (POST)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// unique roll number on every run so the collection can be re-run safely",
+                  "pm.collectionVariables.set('rollNo', 'K22SW' + Date.now().toString().slice(-8));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json();",
+                  "pm.test('Returned data matches request', () => {",
+                  "  pm.expect(d.name).to.eql('Ali Ahmed');",
+                  "  pm.expect(d.rollNo).to.eql(pm.collectionVariables.get('rollNo'));",
+                  "  pm.expect(d.department).to.eql('Software Engineering');",
+                  "  pm.expect(d.semester).to.eql(1);",
+                  "});",
+                  "pm.test('Server generated an id', () => pm.expect(d.id).to.be.a('number'));",
+                  "pm.test('Location header points to new record', () => pm.expect(pm.response.headers.get('Location')).to.eql('/api/students/' + d.id));",
+                  "pm.collectionVariables.set('studentId', d.id);",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students"
+              ]
+            },
+            "description": "Adds a new student. Expected: 201 Created + created record.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ali Ahmed\",\n  \"rollNo\": \"{{rollNo}}\",\n  \"department\": \"Software Engineering\",\n  \"semester\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC02 - READ: Get all students (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('Body is a JSON array', () => pm.expect(list).to.be.an('array'));",
+                  "pm.test('Array contains the student created in TC01', () => {",
+                  "  const id = pm.collectionVariables.get('studentId');",
+                  "  pm.expect(list.some(s => s.id === id)).to.be.true;",
+                  "});",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students"
+              ]
+            },
+            "description": "Retrieves every student. Expected: 200 OK + JSON array."
+          }
+        },
+        {
+          "name": "TC03 - READ: Get a single student by ID (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('Correct record returned', () => {",
+                  "  pm.expect(d.id).to.eql(pm.collectionVariables.get('studentId'));",
+                  "  pm.expect(d.rollNo).to.eql(pm.collectionVariables.get('rollNo'));",
+                  "  pm.expect(d.semester).to.eql(1);",
+                  "});",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Retrieves one student by its database ID. Expected: 200 OK."
+          }
+        },
+        {
+          "name": "TC04 - UPDATE: Update an existing student (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test('Semester updated to 2', () => pm.expect(d.semester).to.eql(2));",
+                  "pm.test('ID and rollNo unchanged', () => {",
+                  "  pm.expect(d.id).to.eql(pm.collectionVariables.get('studentId'));",
+                  "  pm.expect(d.rollNo).to.eql(pm.collectionVariables.get('rollNo'));",
+                  "});",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Updates semester from 1 to 2. Expected: 200 OK + updated record.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ali Ahmed\",\n  \"rollNo\": \"{{rollNo}}\",\n  \"department\": \"Software Engineering\",\n  \"semester\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Error Handling & Validation",
+      "item": [
+        {
+          "name": "TC05 - ERROR: Duplicate rollNo (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('Error message explains duplicate', () => pm.expect(pm.response.json().message).to.include('already exists'));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students"
+              ]
+            },
+            "description": "Same rollNo as TC01. Expected: 409 Conflict.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ali Ahmed\",\n  \"rollNo\": \"{{rollNo}}\",\n  \"department\": \"Software Engineering\",\n  \"semester\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC06 - ERROR: Missing required fields (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const d = pm.response.json();",
+                  "pm.test('Error list mentions missing fields', () => {",
+                  "  pm.expect(d.error).to.eql('Validation Failed');",
+                  "  pm.expect(d.details).to.include('rollNo is required');",
+                  "  pm.expect(d.details).to.include('department is required');",
+                  "  pm.expect(d.details).to.include('semester is required');",
+                  "});",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students"
+              ]
+            },
+            "description": "Only \"name\" is sent. Expected: 400 + list of missing fields.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Only Name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC07 - ERROR: Invalid data (semester = 12, name is a number) (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const d = pm.response.json();",
+                  "pm.test('Validation errors for semester and name', () => {",
+                  "  pm.expect(d.details).to.include('name must be a string');",
+                  "  pm.expect(d.details).to.include('semester must be an integer between 1 and 8');",
+                  "});",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students"
+              ]
+            },
+            "description": "Wrong data types / out-of-range value. Expected: 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": 12345,\n  \"rollNo\": \"K22SW999\",\n  \"department\": \"Software Engineering\",\n  \"semester\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC08 - ERROR: Malformed JSON body (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('Message says invalid JSON', () => pm.expect(pm.response.json().message).to.include('invalid JSON'));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students"
+              ]
+            },
+            "description": "Body is not valid JSON. Expected: 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"name\": \"Broken JSON\", ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC09 - ERROR: Update with invalid data (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('Validation details returned', () => pm.expect(pm.response.json().details).to.be.an('array').that.is.not.empty);",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "{{studentId}}"
+              ]
+            },
+            "description": "PUT with incomplete/invalid body. Expected: 400 and record stays unchanged.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"X\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC10 - ERROR: Get non-existent ID (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('Error message returned', () => pm.expect(pm.response.json().message).to.include('not found'));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "999999"
+              ]
+            },
+            "description": "ID 999999 does not exist. Expected: 404."
+          }
+        },
+        {
+          "name": "TC11 - ERROR: Update non-existent ID (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "999999"
+              ]
+            },
+            "description": "Expected: 404.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ali Ahmed\",\n  \"rollNo\": \"{{rollNo}}\",\n  \"department\": \"Software Engineering\",\n  \"semester\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "TC12 - ERROR: Delete non-existent ID (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "999999"
+              ]
+            },
+            "description": "Expected: 404."
+          }
+        },
+        {
+          "name": "TC13 - ERROR: Invalid ID format \"abc\" (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('Message says id must be a positive integer', () => pm.expect(pm.response.json().message).to.include('positive integer'));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "abc"
+              ]
+            },
+            "description": "ID is not a number. Expected: 400."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Delete & Verify",
+      "item": [
+        {
+          "name": "TC14 - DELETE: Delete an existing student (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Success message returned', () => pm.expect(pm.response.json().message).to.include('deleted successfully'));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Deletes the student created in TC01. Expected: 200 OK."
+          }
+        },
+        {
+          "name": "TC15 - VERIFY: Deleted student cannot be retrieved (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('Deleted record is gone', () => pm.expect(pm.response.json().error).to.eql('Not Found'));",
+                  "pm.test('Content-Type is application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+                  "pm.test('Response time < 1000 ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Confirms the delete worked. Expected: 404."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "studentId",
+      "value": ""
+    },
+    {
+      "key": "rollNo",
+      "value": ""
+    }
+  ]
+}
